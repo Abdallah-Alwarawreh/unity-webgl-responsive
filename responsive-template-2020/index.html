@@ -22,11 +22,13 @@ https://github.com/sno/unity-webgl-responsive
     <title>{{{ PRODUCT_NAME }}}</title>
   </head>
   <body>
-    <div class="webgl-wrapper">
-      <div class="aspect"></div>
-      <div class="webgl-content">
-        <div id="unityContainer">
-          <canvas id="unity-canvas" style="background: {{{ BACKGROUND_FILENAME ? 'url(\'Build/' + BACKGROUND_FILENAME.replace(/'/g, '%27') + '\') center / cover' : BACKGROUND_COLOR }}}"></canvas>
+    <div class="Game">
+      <div class="webgl-wrapper">
+        <div class="aspect"></div>
+        <div class="webgl-content">
+          <div id="unityContainer">
+            <canvas id="unity-canvas" style="background: {{{ BACKGROUND_FILENAME ? 'url(\'Build/' + BACKGROUND_FILENAME.replace(/'/g, '%27') + '\') center / cover' : BACKGROUND_COLOR }}}"></canvas>
+          </div>
         </div>
       </div>
     </div>
