@@ -383,8 +383,10 @@ function createUnityInstance(canvas, config, onProgress) {
     onProgress(0.9 * totalProgress);
   }
 
+{{{ read("UnityLoader/FetchWithProgress.js") }}}
 #if USE_DATA_CACHING
-  {{{ read("UnityLoader/XMLHttpRequest.js") }}}
+  {{{ read("UnityLoader/UnityCache.js") }}}
+  {{{ read("UnityLoader/CachedFetch.js") }}}
 #endif // USE_DATA_CACHING
 
 #if DECOMPRESSION_FALLBACK
@@ -483,32 +485,42 @@ function createUnityInstance(canvas, config, onProgress) {
 #endif // DECOMPRESSION_FALLBACK
 
   function downloadBinary(urlId) {
-    return new Promise(function (resolve, reject) {
       progressUpdate(urlId);
 #if USE_DATA_CACHING
-      var xhr = Module.companyName && Module.productName ? new Module.XMLHttpRequest({
+      var cacheControl = Module.cacheControl(Module[urlId]);
+      var fetchImpl = Module.companyName && Module.productName ? Module.cachedFetch : Module.fetchWithProgress;
+#else // USE_DATA_CACHING
+      var cacheControl = "no-store";
+      var fetchImpl = Module.fetchWithProgress;
+#endif // USE_DATA_CACHING
+      var url = Module[urlId];
+      var mode = /file:\/\//.exec(url) ? "same-origin" : undefined;
+
+      var request = fetchImpl(Module[urlId], {
+        method: "GET",
         companyName: Module.companyName,
         productName: Module.productName,
-        cacheControl: Module.cacheControl(Module[urlId]),
-      }) : new XMLHttpRequest();
-#else // USE_DATA_CACHING
-      var xhr = new XMLHttpRequest();
-#endif // USE_DATA_CACHING
-      xhr.open("GET", Module[urlId]);
-      xhr.responseType = "arraybuffer";
-      xhr.addEventListener("progress", function (e) {
-        progressUpdate(urlId, e);
+        control: cacheControl,
+        mode: mode,
+        onProgress: function (event) {
+          progressUpdate(urlId, event);
+        }
       });
-      xhr.addEventListener("load", function(e) {
-        progressUpdate(urlId, e);
+
+      return request.then(function (response) {
 #if DECOMPRESSION_FALLBACK
-        decompress(new Uint8Array(xhr.response), Module[urlId], resolve);
+        return decompress(response.parsedBody, Module[urlId]);
 #else // DECOMPRESSION_FALLBACK
-        resolve(new Uint8Array(xhr.response));
+        return response.parsedBody;
 #endif // DECOMPRESSION_FALLBACK
+      }).catch(function (e) {
+        var error = 'Failed to download file ' + Module[urlId];
+        if (location.protocol == 'file:') {
+          showBanner(error + '. Loading web pages via a file:// URL without a web server is not supported by this browser. Please use a local development web server to host Unity content, or use the Unity Build and Run option.', 'error');
+        } else {
+          console.error(error);
+        }
       });
-      xhr.send();
-    });
   }
 
   function downloadFramework() {
